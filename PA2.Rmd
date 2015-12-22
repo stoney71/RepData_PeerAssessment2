@@ -1,0 +1,82 @@
+---
+title: "Reproducibe Research Peer Assignment 2"
+author: "Michael Stone"
+date: "21 December 2015"
+output: html_document
+---
+
+This is the report for the Rep Data Peeer Assignent 2.
+
+First step is to load the data and the libraries that will be used:
+
+
+
+```{r, echo=TRUE, cache=TRUE}
+setwd("~/RFolder/RepData_PeerAssessment2")
+dataset <- read.csv("./repdata_data_StormData.csv.bz2")
+
+```
+
+Now clean the data:
+
+```{r, echo=TRUE}
+dataset$BGN_DATE <- as.Date(dataset$BGN_DATE, "%m/%d/%Y")
+```
+
+Next look at a histogram showing the frequency of reports for each year. 
+
+```{r, echo=TRUE}
+library(datasets)
+hist(dataset$BGN_DATE, breaks = 65)
+```
+
+It shows that there are very few reports per year for the first few decades, compared to from the mid 1990's onwards. This indicates numerous problems with the early records, for example less events were recorded. There are also other reasons to ignore the records from the earlier decades - emergency respose has improved remarkably since the 1950's so it makes more sense to use records from more recent times.
+
+Remove all records before 1990 and only take records for events that commenced from Jan 1, 1990 onwards.
+
+```{r, echo=TRUE}
+library(dplyr)
+dataset <- filter(dataset, BGN_DATE > "1990-01-01")
+```
+
+Now for the first analysis which is to study the impact on Population Health in terms of fatalities and injuries caused by various different types of events.
+
+First create a new subset of the loaded database (called healthds) which only has the columns of interest from the database, and also remove all rows where Fatalities and Injuries were zero.
+
+
+```{r, echo=TRUE}
+healthds <- select(dataset, BGN_DATE, EVTYPE, FATALITIES, INJURIES, REMARKS) %>% 
+        filter( (FATALITIES != 0) | (INJURIES != 0))
+```
+
+Next, group the event types together, and count all the Fatalities and Injuries for each event type. Sort them with the highest count at the top of a table.
+
+```{r, echo=TRUE}
+healthds <- healthds %>% group_by(EVTYPE) %>% 
+        summarise(tfat = sum(FATALITIES), tinj = sum(INJURIES)) %>% 
+        arrange(desc(tfat), desc(tinj))
+
+all_fatalities <- sum(healthds$tfat)
+all_injuries <- sum(healthds$tinj)
+```
+
+From 1990 onwards, the total number of all fatalities was `r all_fatalities` and the total number of all injuries was `r all_injuries`.
+
+A review of the top 20 cause of all fatalities follows.
+
+```{r, echo=TRUE}
+head(healthds, n = 20)
+```
+
+The objective is to get the categories for the Event types as close as possible to the list of 47 categories in the document.... As the database has been built up over many years there are some differences in the Event Type wording which are actually the same type but spelt differently, so they appear separately. Combine some of he categories that are splet differently into one as follows:
+
+* "HEAT", "HEAT WAVE" and other variants including HEAT are all called "EXCESSIVE HEAT".
+* "RIP CURRENT" and "RIP CURRENTS" are combined into the same Event Type.
+* "TSTM WIND" is the same as "THUNDERSTORM WIND".
+* "EXTREME COLD/WIND CHILL" is the same as "EXTREME COLD"
+
+
+
+library(ggplot2)
+qplot(EVTYPE, tfat, data = healthdssum)
+```
