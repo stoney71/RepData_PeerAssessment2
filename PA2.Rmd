@@ -1,82 +1,213 @@
 ---
-title: "Reproducibe Research Peer Assignment 2"
-author: "Michael Stone"
-date: "21 December 2015"
+title: "Effects of Severe Weather on US Health and Economic Aspects"
+
 output: html_document
 ---
 
-This is the report for the Rep Data Peeer Assignent 2.
+## Synopsis
+The purpose of this assignment is to analyse the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database and investigate the effects of severe weather events. The database contains records of severe weather events from around 1950 to 2012. The database will be analysed to extract useful data, particularly on health of citizens and economic impacts caused by the events. For the health aspects, death and injury counts will be extracted to ascertain what type of weather events have caused the most deaths and injuries. For the economic aspects, property damage and crop damage records will be used to determine the types of weather events that cause the most damage.
+
+
+## Data Processing
 
 First step is to load the data and the libraries that will be used:
-
 
 
 ```{r, echo=TRUE, cache=TRUE}
 setwd("~/RFolder/RepData_PeerAssessment2")
 dataset <- read.csv("./repdata_data_StormData.csv.bz2")
 
+library(ggplot2)
+library(graphics)
+library(dplyr)
+
 ```
 
-Now clean the data:
+Now, look at a histogram showing the frequency of reports for each year. 
 
 ```{r, echo=TRUE}
 dataset$BGN_DATE <- as.Date(dataset$BGN_DATE, "%m/%d/%Y")
-```
-
-Next look at a histogram showing the frequency of reports for each year. 
-
-```{r, echo=TRUE}
-library(datasets)
 hist(dataset$BGN_DATE, breaks = 65)
 ```
 
-It shows that there are very few reports per year for the first few decades, compared to from the mid 1990's onwards. This indicates numerous problems with the early records, for example less events were recorded. There are also other reasons to ignore the records from the earlier decades - emergency respose has improved remarkably since the 1950's so it makes more sense to use records from more recent times.
+The histogram shows that there are very few reports per year for the first few decades, compared to from the mid 1990's onwards. This indicates numerous problems with the early records, for example less events were recorded. There are also other reasons to ignore the records from the earlier decades - emergency respose has improved remarkably since the 1950's so it makes more sense to use records from more recent times.
 
-Remove all records before 1990 and only take records for events that commenced from Jan 1, 1990 onwards.
+As a result of this, remove all records before 1990 and only take records for events that commenced from Jan 1, 1990 onwards. This is the best balance, removing data from decades ago when systems in place were different to today, while still leaving a very large number of records to work with.
+
 
 ```{r, echo=TRUE}
-library(dplyr)
-dataset <- filter(dataset, BGN_DATE > "1990-01-01")
+dataset <- dplyr::filter(dataset, BGN_DATE > "1990-01-01")
 ```
 
-Now for the first analysis which is to study the impact on Population Health in terms of fatalities and injuries caused by various different types of events.
+This completes the preliminary data processing and creates an appropriate weather event database that is the basis for the health and economic analysis.
 
-First create a new subset of the loaded database (called healthds) which only has the columns of interest from the database, and also remove all rows where Fatalities and Injuries were zero.
+### Data Analysis - Health Aspects
+
+Now for the first analysis which is to study the impact on Population Health in terms of fatalities and injuries caused by various different types of weather events.
+
+First create a new subset of the database (called healthds) which only has the columns of interest from the database, and also remove all rows where Fatalities and Injuries were zero.
 
 
 ```{r, echo=TRUE}
-healthds <- select(dataset, BGN_DATE, EVTYPE, FATALITIES, INJURIES, REMARKS) %>% 
-        filter( (FATALITIES != 0) | (INJURIES != 0))
+healthds <- select(dataset, BGN_DATE, EVTYPE, FATALITIES, INJURIES, REMARKS) %>% filter( (FATALITIES != 0) | (INJURIES != 0))
 ```
 
 Next, group the event types together, and count all the Fatalities and Injuries for each event type. Sort them with the highest count at the top of a table.
 
 ```{r, echo=TRUE}
 healthds <- healthds %>% group_by(EVTYPE) %>% 
-        summarise(tfat = sum(FATALITIES), tinj = sum(INJURIES)) %>% 
-        arrange(desc(tfat), desc(tinj))
+        summarise(FATALITIES = sum(FATALITIES), INJURIES = sum(INJURIES)) %>% 
+        arrange(desc(FATALITIES), desc(INJURIES))
 
-all_fatalities <- sum(healthds$tfat)
-all_injuries <- sum(healthds$tinj)
+total_fatalities <- sum(healthds$FATALITIES)
+total_injuries <- sum(healthds$INJURIES)
 ```
 
-From 1990 onwards, the total number of all fatalities was `r all_fatalities` and the total number of all injuries was `r all_injuries`.
+From 1990 onwards, the total number of all fatalities was `r total_fatalities` and the total number of all injuries was `r total_injuries`.
 
-A review of the top 20 cause of all fatalities follows.
+A review of the top 20 causes of all fatalities follows.
 
 ```{r, echo=TRUE}
 head(healthds, n = 20)
 ```
 
-The objective is to get the categories for the Event types as close as possible to the list of 47 categories in the document.... As the database has been built up over many years there are some differences in the Event Type wording which are actually the same type but spelt differently, so they appear separately. Combine some of he categories that are splet differently into one as follows:
+As the database has been built up over many years there are some differences in the Event Type wording which are actually the same type but spelt differently, so they appear separately. Combine some of the categories that are spelt differently into one as follows:
 
 * "HEAT", "HEAT WAVE" and other variants including HEAT are all called "EXCESSIVE HEAT".
 * "RIP CURRENT" and "RIP CURRENTS" are combined into the same Event Type.
 * "TSTM WIND" is the same as "THUNDERSTORM WIND".
 * "EXTREME COLD/WIND CHILL" is the same as "EXTREME COLD"
 
+```{r, echo=TRUE}
+healthds$EVTYPE <- gsub(".*HEAT.*", "EXCESSIVE HEAT", healthds$EVTYPE, ignore.case = TRUE)
+healthds$EVTYPE <- gsub(".*RIP CURRENT.*", "RIP CURRENT", healthds$EVTYPE, ignore.case = TRUE)
+healthds$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM WIND", healthds$EVTYPE, ignore.case = TRUE)
+healthds$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM WIND", healthds$EVTYPE, ignore.case = TRUE)
+healthds$EVTYPE <- gsub(".*EXTREME COLD.*", "EXTREME COLD", healthds$EVTYPE, ignore.case = TRUE)
+```
+
+Now regroup the data by Event Type and calculate the total fatalities and injuries again.
+
+```{r, echo=TRUE}
+healthds <- healthds %>% group_by(EVTYPE) %>% 
+        summarise(FATALITIES = sum(FATALITIES), INJURIES = sum(INJURIES)) 
+```
+
+The data analysis is now complete. The results are shown in the Results section.
+
+### Data Analysis - Economic Aspects
+
+Next is the analysis of the impact on Economic Indicators - Property Damage and Crop Damage - caused by various different types of weather events.
+
+Create a new subset of the database (called econds) which only has the columns of interest from the database, and also remove all rows where Property Damage and Crop Damage were zero.
+
+```{r, echo=TRUE}
+econds <- select(dataset, BGN_DATE, EVTYPE, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP, REMARKS)
+econds <- filter(econds, (PROPDMG != 0) | (CROPDMG != 0))
+```
+
+There are two columns in econds - PROPDMGEXP and CROPDMGEXP - which act as exponent type columns to expand the value in PROPDMG and CROPDMG respectively. The values are intended to work as follows:
+
+* H: Hundreds of $
+* K: Thousands of $
+* M: Millions of $
+* B: Billions of $
+
+Closer inspection of the contents of these vectors shows there are numerous other values as well. Some effort must be made to extract the most useful information from this data.
+
+```{r, echo=TRUE}
+table(econds$PROPDMGEXP)
+table(econds$CROPDMGEXP)
+```
+
+As the vast majority of entries are made in the thousands, all other uncertain values are assumed the same as K, thousands. For the calculations, a temporary column in econds is created for each: PROPMULT and CROPMULT which has the expansion factor as a number. Then the value in PROPDMG and CROPDMG are multiplied accordingly.
+
+```{r, echo=TRUE}
+econds$PROPDMGEXP <- as.character(econds$PROPDMGEXP)
+econds$CROPDMGEXP <- as.character(econds$CROPDMGEXP)
+
+econds <- econds %>% mutate(PROPMULT = ifelse(PROPDMGEXP == "H" | PROPDMGEXP == "h", 100, 
+                ifelse(PROPDMGEXP == "K" | PROPDMGEXP == "k", 1000, 
+                ifelse(PROPDMGEXP == "M" | PROPDMGEXP == "m", 1000000,
+                ifelse(PROPDMGEXP == "B" | PROPDMGEXP == "b", 1000000000,
+                1000))))) %>%
+                mutate(CROPMULT = ifelse(CROPDMGEXP == "H" | CROPDMGEXP == "h", 100, 
+                ifelse(CROPDMGEXP == "K" | CROPDMGEXP == "k", 1000, 
+                ifelse(CROPDMGEXP == "M" | CROPDMGEXP == "m", 1000000,
+                ifelse(CROPDMGEXP == "B" | CROPDMGEXP == "b", 1000000000,
+                1000))))) %>%
+                mutate (TOTPROPDMG = PROPDMG * PROPMULT, TOTCROPDMG = CROPDMG * CROPMULT) %>%
+                arrange(desc(TOTPROPDMG))
+
+```
+An analysis of the top 3 events for Property Damage shows a clear mistake in terms of the valuation. 
+
+```{r, echo=TRUE}
+head(econds, 3)
+```
+The first event shows Property Damage in the billions of $ but from reading the Remarks it is clear this is supposed to be millions of $. With $115 Billion of damage this is significantly higher value than events 2 and 3, but from the Remarks column clearly events 2 & 3 were actually much more severe. Change the value in TOTPROPDMG for this event from Billions to Millions. Re-evaluate.
+
+```{r, echo=TRUE}
+econds$TOTPROPDMG[1] <- econds$PROPDMG[1] * 1000000
+```
+
+Now remove unwanted columns from econds that are not needed any further.
+
+```{r, echo=TRUE}
+econds <- select(econds, BGN_DATE, EVTYPE, TOTPROPDMG, TOTCROPDMG)
+```
+
+As for the Health Analysis, errors in the spelling of Event Types must be corrected before grouping:
+
+```{r, echo=TRUE}
+econds$EVTYPE <- gsub(".*HEAT.*", "EXCESSIVE HEAT", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*RIP CURRENT.*", "RIP CURRENT", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM WIND", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM WIND", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*EXTREME COLD.*", "EXTREME COLD", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*FIRE.*", "WILDFIRE", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*HURRICANE.*", "HURRICANE/TYPHOON", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*TYPHOON.*", "HURRICANE/TYPHOON", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*RIVER FLOOD.*", "FLOOD", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*FLASH FLOOD.*", "FLASH FLOOD", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*STORM SURGE.*", "STORM SURGE", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*FREEZE.*", "FROST/FREEZE", econds$EVTYPE, ignore.case = TRUE)
+```
+
+Next group the Event Types for Property Damage and Crop Damage.
+
+```{r, echo=TRUE}
+econds <- econds %>% group_by(EVTYPE) %>% summarise(TOTPROPDMG = sum(TOTPROPDMG), TOTCROPDMG = sum(TOTCROPDMG))
+```
+
+The data analysis is now complete. The results are shown in the Results section.
+
+## Results
+
+### Health Aspects
+
+The Event Types that caused the Top 10 Fatalities and Top 10 Injuries across the US are shown below along with the total number of Fatalities and Injuries.
+
+```{r, echo=TRUE}
+top10fat <- healthds %>% top_n(10, FATALITIES) %>% select(-INJURIES) %>% arrange((FATALITIES))
+top10inj <- healthds %>% top_n(10, INJURIES) %>% select(-FATALITIES) %>% arrange((INJURIES))
+
+par(las=2)
+par(mar=c(5,10,4,2))
+barplot(top10fat$FATALITIES, names = top10fat$EVTYPE, horiz = TRUE)
+barplot(top10inj$INJURIES, names = top10fat$EVTYPE, horiz = TRUE)
+```
 
 
-library(ggplot2)
-qplot(EVTYPE, tfat, data = healthdssum)
+### Economic Aspects
+The Event Types that caused the Top 10 Property Damage $ and Top 10 Crop Damage $ across the US are shown below along with the total value in $.
+
+```{r, echo=TRUE}
+top10prop <- econds %>% top_n(10, TOTPROPDMG) %>% select(-TOTCROPDMG) %>% arrange((TOTPROPDMG))
+top10crop <- econds %>% top_n(10, TOTCROPDMG) %>% select(-TOTPROPDMG) %>% arrange((TOTCROPDMG))
+
+par(las=2)
+par(mar=c(5,10,4,2))
+barplot(top10prop$TOTPROPDMG, names = top10prop$EVTYPE, horiz = FALSE)
+barplot(top10crop$TOTCROPDMG, names = top10crop$EVTYPE, horiz = FALSE)
 ```
