@@ -1,10 +1,8 @@
 setwd("~/RFolder/RepData_PeerAssessment2")
 dataset <- read.csv("./repdata_data_StormData.csv.bz2")
 
-library(dplyr)
-library(ggplot2)
 library(graphics)
-library(lattice)
+library(dplyr)
 
 ## Next, review how many events recorded per year.
 
@@ -29,20 +27,15 @@ head(healthds, n = 20)
 
 healthds$EVTYPE <- gsub(".*HEAT.*", "EXCESSIVE HEAT", healthds$EVTYPE, ignore.case = TRUE)
 healthds$EVTYPE <- gsub(".*RIP CURRENT.*", "RIP CURRENT", healthds$EVTYPE, ignore.case = TRUE)
-healthds$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM WIND", healthds$EVTYPE, ignore.case = TRUE)
-healthds$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM WIND", healthds$EVTYPE, ignore.case = TRUE)
-healthds$EVTYPE <- gsub(".*EXTREME COLD.*", "EXTREME COLD/WIND CHILL", healthds$EVTYPE, ignore.case = TRUE)
+healthds$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM", healthds$EVTYPE, ignore.case = TRUE)
+healthds$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM", healthds$EVTYPE, ignore.case = TRUE)
+healthds$EVTYPE <- gsub(".*EXTREME COLD.*", "EXTREME COLD", healthds$EVTYPE, ignore.case = TRUE)
 
 healthds <- healthds %>% group_by(EVTYPE) %>% 
         summarise(FATALITIES = sum(FATALITIES), INJURIES = sum(INJURIES)) 
 
 top10fat <- healthds %>% top_n(10, FATALITIES) %>% select(-INJURIES) %>% arrange((FATALITIES))
 top10inj <- healthds %>% top_n(10, INJURIES) %>% select(-FATALITIES) %>% arrange((INJURIES))
-
-par(las=2)
-par(mar=c(5,10,4,2))
-barplot(top10fat$FATALITIES, names = top10fat$EVTYPE, horiz = TRUE)
-barplot(top10inj$INJURIES, names = top10fat$EVTYPE, horiz = TRUE)
 
 
 ## Part 2: Effect on Economic
@@ -73,12 +66,12 @@ econds <- select(econds, BGN_DATE, EVTYPE, TOTPROPDMG, TOTCROPDMG)
 
 econds$EVTYPE <- gsub(".*HEAT.*", "EXCESSIVE HEAT", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*RIP CURRENT.*", "RIP CURRENT", econds$EVTYPE, ignore.case = TRUE)
-econds$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM WIND", econds$EVTYPE, ignore.case = TRUE)
-econds$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM WIND", econds$EVTYPE, ignore.case = TRUE)
-econds$EVTYPE <- gsub(".*EXTREME COLD.*", "EXTREME COLD/WIND CHILL", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*EXTREME COLD.*", "EXTREME COLD", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*FIRE.*", "WILDFIRE", econds$EVTYPE, ignore.case = TRUE)
-econds$EVTYPE <- gsub(".*HURRICANE.*", "HURRICANE/TYPHOON", econds$EVTYPE, ignore.case = TRUE)
-econds$EVTYPE <- gsub(".*TYPHOON.*", "HURRICANE/TYPHOON", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*HURRICANE.*", "HURRICANE", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*TYPHOON.*", "HURRICANE", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*RIVER FLOOD.*", "FLOOD", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*FLASH FLOOD.*", "FLASH FLOOD", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*STORM SURGE.*", "STORM SURGE", econds$EVTYPE, ignore.case = TRUE)
@@ -93,10 +86,19 @@ head(econds, n=20)
 top10prop <- econds %>% top_n(10, TOTPROPDMG) %>% select(-TOTCROPDMG) %>% arrange((TOTPROPDMG))
 top10crop <- econds %>% top_n(10, TOTCROPDMG) %>% select(-TOTPROPDMG) %>% arrange((TOTCROPDMG))
 
-par(las=2)
-par(mar=c(5,10,4,2))
-barplot(top10prop$TOTPROPDMG, names = top10prop$EVTYPE, horiz = FALSE)
-barplot(top10crop$TOTCROPDMG, names = top10crop$EVTYPE, horiz = FALSE)
+
+## Part 3: Reports (Plots)
+
+par(mfcol = c(2, 1), las=1, mar = c(2,10,3,0))
+barplot(top10fat$FATALITIES, names = top10fat$EVTYPE, horiz = TRUE, main = "FATALITIES: 1990 - 2011")
+barplot(top10inj$INJURIES, names = top10fat$EVTYPE, horiz = TRUE, main = "INJURIES: 1990 - 2011")
 
 
+top10prop$TOTPROPDMG <- top10prop$TOTPROPDMG / 1000000000
+top10crop$TOTCROPDMG <- top10crop$TOTCROPDMG / 1000000000
+
+
+par(mfcol = c(2, 1), las=1, mar = c(2,10,3,0))
+barplot(top10prop$TOTPROPDMG, names = top10prop$EVTYPE, horiz = TRUE, main = "PROPERTY DAMAGE: 1990 - 2011 (US$ Billions)")
+barplot(top10crop$TOTCROPDMG, names = top10crop$EVTYPE, horiz = TRUE, main = "CROP DAMAGE: 1990 - 2011 (US$ Billions)")
 

@@ -13,11 +13,10 @@ The purpose of this assignment is to analyse the U.S. National Oceanic and Atmos
 First step is to load the data and the libraries that will be used:
 
 
-```{r, echo=TRUE, cache=TRUE}
+```{r, echo=TRUE}
 setwd("~/RFolder/RepData_PeerAssessment2")
 dataset <- read.csv("./repdata_data_StormData.csv.bz2")
 
-library(ggplot2)
 library(graphics)
 library(dplyr)
 
@@ -81,8 +80,8 @@ As the database has been built up over many years there are some differences in 
 ```{r, echo=TRUE}
 healthds$EVTYPE <- gsub(".*HEAT.*", "EXCESSIVE HEAT", healthds$EVTYPE, ignore.case = TRUE)
 healthds$EVTYPE <- gsub(".*RIP CURRENT.*", "RIP CURRENT", healthds$EVTYPE, ignore.case = TRUE)
-healthds$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM WIND", healthds$EVTYPE, ignore.case = TRUE)
-healthds$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM WIND", healthds$EVTYPE, ignore.case = TRUE)
+healthds$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM", healthds$EVTYPE, ignore.case = TRUE)
+healthds$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM", healthds$EVTYPE, ignore.case = TRUE)
 healthds$EVTYPE <- gsub(".*EXTREME COLD.*", "EXTREME COLD", healthds$EVTYPE, ignore.case = TRUE)
 ```
 
@@ -162,12 +161,12 @@ As for the Health Analysis, errors in the spelling of Event Types must be correc
 ```{r, echo=TRUE}
 econds$EVTYPE <- gsub(".*HEAT.*", "EXCESSIVE HEAT", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*RIP CURRENT.*", "RIP CURRENT", econds$EVTYPE, ignore.case = TRUE)
-econds$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM WIND", econds$EVTYPE, ignore.case = TRUE)
-econds$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM WIND", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*THUNDER.*", "THUNDERSTORM", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*TSTM.*", "THUNDERSTORM", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*EXTREME COLD.*", "EXTREME COLD", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*FIRE.*", "WILDFIRE", econds$EVTYPE, ignore.case = TRUE)
-econds$EVTYPE <- gsub(".*HURRICANE.*", "HURRICANE/TYPHOON", econds$EVTYPE, ignore.case = TRUE)
-econds$EVTYPE <- gsub(".*TYPHOON.*", "HURRICANE/TYPHOON", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*HURRICANE.*", "HURRICANE", econds$EVTYPE, ignore.case = TRUE)
+econds$EVTYPE <- gsub(".*TYPHOON.*", "HURRICANE", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*RIVER FLOOD.*", "FLOOD", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*FLASH FLOOD.*", "FLASH FLOOD", econds$EVTYPE, ignore.case = TRUE)
 econds$EVTYPE <- gsub(".*STORM SURGE.*", "STORM SURGE", econds$EVTYPE, ignore.case = TRUE)
@@ -192,22 +191,26 @@ The Event Types that caused the Top 10 Fatalities and Top 10 Injuries across the
 top10fat <- healthds %>% top_n(10, FATALITIES) %>% select(-INJURIES) %>% arrange((FATALITIES))
 top10inj <- healthds %>% top_n(10, INJURIES) %>% select(-FATALITIES) %>% arrange((INJURIES))
 
-par(las=2)
-par(mar=c(5,10,4,2))
-barplot(top10fat$FATALITIES, names = top10fat$EVTYPE, horiz = TRUE)
-barplot(top10inj$INJURIES, names = top10fat$EVTYPE, horiz = TRUE)
+
+par(mfcol = c(2, 1), las=1, mar = c(2,10,3,0))
+barplot(top10fat$FATALITIES, names = top10fat$EVTYPE, horiz = TRUE, main = "FATALITIES: 1990 - 2011")
+barplot(top10inj$INJURIES, names = top10fat$EVTYPE, horiz = TRUE, main = "INJURIES: 1990 - 2011")
 ```
 
+These plots show that Excessive Heat was the biggest cause of Fatalities and Injuries, followed by Tornadoes.
 
 ### Economic Aspects
-The Event Types that caused the Top 10 Property Damage $ and Top 10 Crop Damage $ across the US are shown below along with the total value in $.
+The Event Types that caused the Top 10 Property Damage in Dollars and Top 10 Crop Damage in Dollars across the US are shown below along with the total value in Billions of Dollars.
 
 ```{r, echo=TRUE}
 top10prop <- econds %>% top_n(10, TOTPROPDMG) %>% select(-TOTCROPDMG) %>% arrange((TOTPROPDMG))
 top10crop <- econds %>% top_n(10, TOTCROPDMG) %>% select(-TOTPROPDMG) %>% arrange((TOTCROPDMG))
 
-par(las=2)
-par(mar=c(5,10,4,2))
-barplot(top10prop$TOTPROPDMG, names = top10prop$EVTYPE, horiz = FALSE)
-barplot(top10crop$TOTCROPDMG, names = top10crop$EVTYPE, horiz = FALSE)
+top10prop$TOTPROPDMG <- top10prop$TOTPROPDMG / 1000000000
+top10crop$TOTCROPDMG <- top10crop$TOTCROPDMG / 1000000000
+
+par(mfcol = c(2, 1), las=1, mar = c(2,10,3,0))
+barplot(top10prop$TOTPROPDMG, names = top10prop$EVTYPE, horiz = TRUE, main = "PROPERTY DAMAGE: 1990 - 2011 (US$ Billions)")
+barplot(top10crop$TOTCROPDMG, names = top10crop$EVTYPE, horiz = TRUE, main = "CROP DAMAGE: 1990 - 2011 (US$ Billions)")
 ```
+These plots show that Hurricanes cause the most Property Damage followed by Storm Surges. Droughts cause the most Crop Damage followed by Floods.
